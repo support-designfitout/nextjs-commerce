@@ -1,0 +1,40 @@
+name: Send Control Command
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: "Environment (staging|prod)"
+        required: true
+        default: "prod"
+      body_json:
+        description: "Exact JSON body to POST to /control/command"
+        required: true
+        default: '{"command":"update_flag","origin":"MrketOz","actor":"SeveNue","brand":"FitoutLab","payload":{"key":"AB_LAYOUT","value":"60_40"}}'
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve context
+        id: ctx
+        run: |
+          if [ "${{ github.event.inputs.env }}" = "prod" ]; then
+            echo "BASE=${{ secrets.PROD_BASE_URL }}" >> $GITHUB_OUTPUT
+            echo "HMAC=${{ secrets.PROD_SEVENEU_HMAC_SECRET }}" >> $GITHUB_OUTPUT
+          else
+            echo "BASE=${{ secrets.STAGING_BASE_URL }}" >> $GITHUB_OUTPUT
+            echo "HMAC=${{ secrets.STAGING_SEVENEU_HMAC_SECRET }}" >> $GITHUB_OUTPUT
+          fi
+      - name: Sign and send
+        env:
+          BASE: ${{ steps.ctx.outputs.BASE }}
+          HMAC: ${{ steps.ctx.outputs.HMAC }}
+          BODY: ${{ github.event.inputs.body_json }}
+        run: |
+          test -n "$BASE" && test -n "$HMAC" || (echo "Missing BASE/HMAC"; exit 1)
+          SIG=$(printf "%s" "$BODY" | openssl dgst -sha256 -hmac "$HMAC" | awk '{print $2}')
+          echo "POST $BASE/control/command"
+          curl -s -i -X POST "$BASE/control/command" \
+            -H "Content-Type: application/json" \
+            -H "x-signature: $SIG" \
+            --data "$BODY"

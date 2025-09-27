@@ -42,3 +42,10 @@ What does this PR implement or fix?
 
 ## 🧪 Testing Notes
 Steps to validate this PR (include curl/Postman examples or UI flow):
+
+---
+
+## 📦 Deployment
+- [ ] Merge to `staging` for QA  
+- [ ] Approved for `main` (production)  
+- [ ] Tag release if applicable (`vX.Y.Z`)
